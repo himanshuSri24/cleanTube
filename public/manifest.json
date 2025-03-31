@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "CleanTube",
+  "version": "1.0",
+  "description": "Unsubscribe from all YouTube channels with one click!",
+  "permissions": ["tabs", "scripting", "storage"],
+  "host_permissions": ["https://www.youtube.com/feed/channels"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/feed/channels"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
