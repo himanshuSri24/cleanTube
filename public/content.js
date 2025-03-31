@@ -11,46 +11,48 @@ chrome.storage.local.get("cleanTubeRunScriptForRemoveSubscriptions", (data) => {
 });
 
 async function scrollToBottom() {
-  // Scroll to the bottom of the page initially, to ensure all the subbed channels are loaded
   return new Promise((resolve) => {
     let lastScrollHeight = document.documentElement.scrollHeight;
     let startIdleTime = Date.now();
 
-    // Observing for new content ( height change )
     const observer = new MutationObserver(() => {
       lastScrollHeight = document.documentElement.scrollHeight;
-      startIdleTime = Date.now(); // resetting the timer on mutation
+      startIdleTime = Date.now();
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    const scrollInterval = setInterval(() => {
-      // adding timeouts to prevent the script from running too fast ( don't want to get blocked 🤌🏻 )
-      window.scrollBy(0, 1000);
+    async function scrollStep() {
+      const newScrollHeight = document.documentElement.scrollHeight;
 
-      setTimeout(() => {
-        let newScrollHeight = document.documentElement.scrollHeight;
+      if (
+        newScrollHeight > lastScrollHeight ||
+        window.scrollY < newScrollHeight - window.innerHeight
+      ) {
+        lastScrollHeight = newScrollHeight;
+        startIdleTime = Date.now();
 
-        if (
-          newScrollHeight > lastScrollHeight ||
-          window.scrollY < newScrollHeight - window.innerHeight
-        ) {
-          lastScrollHeight = newScrollHeight;
-          startIdleTime = Date.now();
-        }
+        window.scrollBy(0, 1000);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        return true; // Continue scrolling
+      } else if (Date.now() - startIdleTime >= 5000) {
+        observer.disconnect();
+        resolve(true); // Exit successfully
+        return false; // Stop scrolling
+      } else {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        return true; // Keep checking
+      }
+    }
 
-        // waiting for 5 seconds of inactivity before stopping the scroll ( since more subs might load )
-        if (
-          Date.now() - startIdleTime >= 5000 &&
-          window.innerHeight + window.scrollY >=
-            document.documentElement.scrollHeight - 5
-        ) {
-          clearInterval(scrollInterval);
-          observer.disconnect();
-          resolve(true);
-        }
-      }, 500);
-    }, 500);
+    async function startScroll() {
+      while (true) {
+        const continueScrolling = await scrollStep();
+        if (!continueScrolling) break; // Exit loop when done
+      }
+    }
+
+    startScroll().catch(() => observer.disconnect());
   });
 }
 
